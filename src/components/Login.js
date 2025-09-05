@@ -1,38 +1,159 @@
 import React from "react";
+import { useState, useRef } from "react";
+import { checkValidate } from "../utils/checkValidate";
 import Header from "./Header";
-import { useState} from "react";
-
-
+import { auth } from "../utils/firebase";
+import { useDispatch } from "react-redux";
+import { addUser } from "../utils/userSlice";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [isSignIn, setIsSignIn] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const dispatch = useDispatch();
+
+  // useRef hooks for form data
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
+  const firstNameRef = useRef(null);
+  const lastNameRef = useRef(null);
+  const rememberMeRef = useRef(null);
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Clear previous error
+    setErrorMessage("");
+
+    // Get values from refs
+    const email = emailRef.current?.value || "";
+    const password = passwordRef.current?.value || "";
+    const firstName = firstNameRef.current?.value || "";
+    const lastName = lastNameRef.current?.value || "";
+    const confirmPassword = confirmPasswordRef.current?.value || "";
+
+    // Validate form data
+    const validationError = checkValidate(
+      email,
+      password,
+      isSignIn,
+      firstName,
+      lastName,
+      confirmPassword
+    );
+
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
+    // If validation passes, proceed with submit
     if (isSignIn) {
-      // Handle sign in logic here
-      console.log("Signing in with:", { email, password });
+      // Sign In Logic
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          console.log("User signed in:", user);
+          navigate("/browse");
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          let friendlyMessage = "Sign in failed. Please try again.";
+
+          // Provide user-friendly error messages
+          switch (errorCode) {
+            case "auth/user-not-found":
+              friendlyMessage = "No account found with this email.";
+              break;
+            case "auth/wrong-password":
+              friendlyMessage = "Incorrect password.";
+              break;
+            case "auth/invalid-email":
+              friendlyMessage = "Invalid email address.";
+              break;
+            case "auth/user-disabled":
+              friendlyMessage = "This account has been disabled.";
+              break;
+            case "auth/too-many-requests":
+              friendlyMessage =
+                "Too many failed attempts. Please try again later.";
+              break;
+            default:
+              friendlyMessage = error.message;
+          }
+
+          setErrorMessage(friendlyMessage);
+        });
     } else {
-      // Handle sign up logic here
-      console.log("Signing up with:", { firstName, lastName, email, password });
+      // Sign Up Logic
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          console.log("User created:", user);
+
+          // Update profile with display name and photo
+          return updateProfile(user, {
+            displayName: firstName + " " + lastName,
+            photoURL:
+              "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
+          });
+        })
+        .then(() => {
+          console.log("Profile updated successfully");
+           const {uid,email,displayName,photoURL} = auth.currentUser;
+                      dispatch(addUser({
+                          uid:uid,
+                          email:email,
+                          displayName:displayName,
+                          photoURL:photoURL,
+                      }))
+          navigate("/browse");
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          let friendlyMessage = "Sign up failed. Please try again.";
+
+          // Provide user-friendly error messages
+          switch (errorCode) {
+            case "auth/email-already-in-use":
+              friendlyMessage = "An account with this email already exists.";
+              break;
+            case "auth/invalid-email":
+              friendlyMessage = "Invalid email address.";
+              break;
+            case "auth/operation-not-allowed":
+              friendlyMessage = "Email/password accounts are not enabled.";
+              break;
+            case "auth/weak-password":
+              friendlyMessage = "Password is too weak.";
+              break;
+            default:
+              friendlyMessage = error.message;
+          }
+
+          setErrorMessage(friendlyMessage);
+        });
     }
   };
 
   const toggleAuthMode = () => {
     setIsSignIn(!isSignIn);
-    // Clear form when switching
-    setEmail("");
-    setPassword("");
-    setConfirmPassword("");
-    setFirstName("");
-    setLastName("");
-    setRememberMe(false);
+    setErrorMessage(""); // Clear error when switching modes
+
+    // Clear form fields
+    if (emailRef.current) emailRef.current.value = "";
+    if (passwordRef.current) passwordRef.current.value = "";
+    if (confirmPasswordRef.current) confirmPasswordRef.current.value = "";
+    if (firstNameRef.current) firstNameRef.current.value = "";
+    if (lastNameRef.current) lastNameRef.current.value = "";
+    if (rememberMeRef.current) rememberMeRef.current.checked = false;
   };
 
   return (
@@ -62,49 +183,49 @@ const Login = () => {
             {!isSignIn && (
               <>
                 <input
+                  ref={firstNameRef}
                   type="text"
                   placeholder="First Name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
                   className="w-full p-4 bg-gray-700 text-white placeholder-gray-400 rounded border border-gray-600 focus:bg-gray-600 focus:border-white focus:outline-none"
                 />
                 <input
+                  ref={lastNameRef}
                   type="text"
                   placeholder="Last Name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
                   className="w-full p-4 bg-gray-700 text-white placeholder-gray-400 rounded border border-gray-600 focus:bg-gray-600 focus:border-white focus:outline-none"
                 />
               </>
             )}
 
             <input
+              ref={emailRef}
               type="text"
               placeholder="Email or mobile number"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               className="w-full p-4 bg-gray-700 text-white placeholder-gray-400 rounded border border-gray-600 focus:bg-gray-600 focus:border-white focus:outline-none"
             />
 
             <input
+              ref={passwordRef}
               type="password"
               placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               className="w-full p-4 bg-gray-700 text-white placeholder-gray-400 rounded border border-gray-600 focus:bg-gray-600 focus:border-white focus:outline-none"
             />
 
             {/* Confirm Password for Sign Up */}
             {!isSignIn && (
               <input
+                ref={confirmPasswordRef}
                 type="password"
                 placeholder="Confirm Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full p-4 bg-gray-700 text-white placeholder-gray-400 rounded border border-gray-600 focus:bg-gray-600 focus:border-white focus:outline-none"
               />
             )}
           </div>
+
+          {/* Error Message - Small red text above button */}
+          {errorMessage && (
+            <p className="text-red-500 text-sm mt-4 mb-2">{errorMessage}</p>
+          )}
 
           <button
             onClick={handleSubmit}
@@ -130,10 +251,9 @@ const Login = () => {
 
               <div className="flex items-center mt-6 mb-4">
                 <input
+                  ref={rememberMeRef}
                   type="checkbox"
                   id="remember"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="mr-2 h-4 w-4"
                 />
                 <label htmlFor="remember" className="text-gray-400 text-sm">
