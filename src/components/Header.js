@@ -1,13 +1,39 @@
 import React from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { auth } from "../utils/firebase";
-import { signOut } from "firebase/auth";
+import { useDispatch } from "react-redux";
+import { addUser, removeUser } from "../utils/userSlice";
+import { onAuthStateChanged ,signOut} from "firebase/auth";
+import { LOGO_URL,USER_AVATAR } from "../utils/constants";
 
 const Header = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((store) => store.user);
-
+  useEffect(() => {
+   const unsubscribe= onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const { uid, email, displayName, photoURL } = user;
+        dispatch(
+          addUser({
+            uid: uid,
+            email: email,
+            displayName: displayName,
+            photoURL: photoURL,
+          })
+        );
+        navigate("/browse");
+      } else {
+        // User is signed out
+        // ...
+        dispatch(removeUser());
+        navigate("/");
+      }
+    });
+    return ()=>unsubscribe();
+  }, []);
   const handleSignOut = () => {
     signOut(auth)
       .then(() => {
@@ -17,6 +43,7 @@ const Header = () => {
         console.error("Sign out error:", error);
         navigate("/error");
       });
+
   };
 
   return (
@@ -25,7 +52,7 @@ const Header = () => {
         {/* Netflix Logo */}
         <img
           className="h-8 md:h-12 cursor-pointer"
-          src="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg"
+          src={LOGO_URL}
           alt="Netflix Logo"
           onClick={() => navigate("/")}
         />
@@ -37,8 +64,8 @@ const Header = () => {
               className="w-8 h-8 md:w-10 md:h-10 rounded"
               alt="User Profile"
               src={
-                user?.photoURL ||
-                "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+                user?.photoURL || USER_AVATAR
+                
               }
             />
             <button

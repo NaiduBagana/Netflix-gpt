@@ -10,8 +10,7 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
-
+import { handleerror, handlerror2 } from "../utils/loginError";
 const Login = () => {
   const [isSignIn, setIsSignIn] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -24,7 +23,6 @@ const Login = () => {
   const firstNameRef = useRef(null);
   const lastNameRef = useRef(null);
   const rememberMeRef = useRef(null);
-  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -61,33 +59,10 @@ const Login = () => {
         .then((userCredential) => {
           const user = userCredential.user;
           console.log("User signed in:", user);
-          navigate("/browse");
         })
         .catch((error) => {
           const errorCode = error.code;
-          let friendlyMessage = "Sign in failed. Please try again.";
-
-          // Provide user-friendly error messages
-          switch (errorCode) {
-            case "auth/user-not-found":
-              friendlyMessage = "No account found with this email.";
-              break;
-            case "auth/wrong-password":
-              friendlyMessage = "Incorrect password.";
-              break;
-            case "auth/invalid-email":
-              friendlyMessage = "Invalid email address.";
-              break;
-            case "auth/user-disabled":
-              friendlyMessage = "This account has been disabled.";
-              break;
-            case "auth/too-many-requests":
-              friendlyMessage =
-                "Too many failed attempts. Please try again later.";
-              break;
-            default:
-              friendlyMessage = error.message;
-          }
+          let friendlyMessage = handleerror(errorCode, error);
 
           setErrorMessage(friendlyMessage);
         });
@@ -107,37 +82,19 @@ const Login = () => {
         })
         .then(() => {
           console.log("Profile updated successfully");
-           const {uid,email,displayName,photoURL} = auth.currentUser;
-                      dispatch(addUser({
-                          uid:uid,
-                          email:email,
-                          displayName:displayName,
-                          photoURL:photoURL,
-                      }))
-          navigate("/browse");
+          const { uid, email, displayName, photoURL } = auth.currentUser;
+          dispatch(
+            addUser({
+              uid: uid,
+              email: email,
+              displayName: displayName,
+              photoURL: photoURL,
+            })
+          );
         })
         .catch((error) => {
           const errorCode = error.code;
-          let friendlyMessage = "Sign up failed. Please try again.";
-
-          // Provide user-friendly error messages
-          switch (errorCode) {
-            case "auth/email-already-in-use":
-              friendlyMessage = "An account with this email already exists.";
-              break;
-            case "auth/invalid-email":
-              friendlyMessage = "Invalid email address.";
-              break;
-            case "auth/operation-not-allowed":
-              friendlyMessage = "Email/password accounts are not enabled.";
-              break;
-            case "auth/weak-password":
-              friendlyMessage = "Password is too weak.";
-              break;
-            default:
-              friendlyMessage = error.message;
-          }
-
+          let friendlyMessage = handlerror2(errorCode,error);
           setErrorMessage(friendlyMessage);
         });
     }
