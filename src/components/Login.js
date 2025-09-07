@@ -11,6 +11,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { handleerror, handlerror2 } from "../utils/loginError";
+import { BG_URL } from "../utils/constants";
 const Login = () => {
   const [isSignIn, setIsSignIn] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -120,8 +121,8 @@ const Login = () => {
       {/* Background Image */}
       <div className="absolute inset-0">
         <img
-          src="https://assets.nflxext.com/ffe/siteui/vlv3/8d617e19-3c3c-4c28-8998-c9b14dbc7200/web/IN-en-20250901-TRIFECTA-perspective_48d84d4e-9558-46b8-a0f3-8b2dc8478431_medium.jpg"
           alt="background"
+          src={BG_URL}
           className="w-full h-full object-cover"
         />
         {/* Dark overlay */}

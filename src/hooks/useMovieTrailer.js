@@ -19,7 +19,7 @@ const UseMovieTrailer = (movieId) => {
           : data.results?.[0];
 
         if (trailer) {
-          console.log(trailer);
+          //console.log(trailer);
           dispatch(addTrailerVideo(trailer));
         }
       } catch (error) {
